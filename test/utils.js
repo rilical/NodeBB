@@ -274,6 +274,28 @@ describe('Utility Methods', () => {
 		done();
 	});
 
+	it('should return true if browser is android', (done) => {
+		const originalNavigator = global.navigator;
+
+		Object.defineProperty(global, 'navigator', {
+			value: {
+				userAgent: 'Mozilla/5.0 (Linux; Android 8.0.0; SM-G950F Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.96 Mobile Safari/537.36',
+			},
+			configurable: true,
+		});
+
+		console.log('User Agent:', global.navigator.userAgent); // Check if userAgent is correct
+		console.log('isAndroidBrowser:', utils.isAndroidBrowser()); // Log the result of isAndroidBrowser
+
+		assert.equal(utils.isAndroidBrowser(), true); // Ensure it detects Android correctly
+
+		// Restore the original navigator
+		Object.defineProperty(global, 'navigator', {
+			value: originalNavigator,
+		});
+
+		done();
+	});
 	it('should check if element is in viewport', (done) => {
 		const el = $('<div>some text</div>');
 		assert(utils.isElementInViewport(el));

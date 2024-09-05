@@ -2,7 +2,10 @@
 
 'use strict';
 
-const $ = require('jquery');
+const { JSDOM } = require('jsdom');
+
+const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+const $ = require('jquery')(dom.window);
 
 const utils = { ...require('./utils.common') };
 
@@ -13,7 +16,6 @@ utils.getLanguage = function () {
 	}
 	return lang;
 };
-
 
 utils.makeNumbersHumanReadable = function (elements) {
 	console.warn('[deprecated] utils.makeNumbersHumanReadable is deprecated! Use {humanReadableNumber(value)} helper directly in the template');
@@ -36,7 +38,6 @@ utils.addCommasToNumbers = function (elements) {
 };
 
 utils.findBootstrapEnvironment = function () {
-	// http://stackoverflow.com/questions/14441456/how-to-detect-which-device-view-youre-on-using-twitter-bootstrap-api
 	const envs = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
 	const el = document.createElement('div');
 	document.body.appendChild(el);
@@ -62,7 +63,6 @@ utils.isMobile = function () {
 };
 
 utils.assertPasswordValidity = (password, zxcvbn) => {
-	// More checks on top of basic utils.isPasswordValid()
 	if (!utils.isPasswordValid(password)) {
 		throw new Error('[[user:change-password-error]]');
 	} else if (password.length < ajaxify.data.minimumPasswordLength) {
@@ -78,11 +78,10 @@ utils.assertPasswordValidity = (password, zxcvbn) => {
 };
 
 utils.generateUUID = function () {
-	// from https://github.com/tracker1/node-uuid4/blob/master/browser.js
 	const temp_url = URL.createObjectURL(new Blob());
 	const uuid = temp_url.toString();
 	URL.revokeObjectURL(temp_url);
-	return uuid.split(/[:/]/g).pop().toLowerCase(); // remove prefixes
+	return uuid.split(/[:/]/g).pop().toLowerCase();
 };
 
 module.exports = utils;

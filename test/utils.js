@@ -284,10 +284,10 @@ describe('Utility Methods', () => {
 			configurable: true,
 		});
 
-		console.log('User Agent:', global.navigator.userAgent); // Check if userAgent is correct
-		console.log('isAndroidBrowser:', utils.isAndroidBrowser()); // Log the result of isAndroidBrowser
+		console.log('User Agent:', global.navigator.userAgent);
+		console.log('isAndroidBrowser:', utils.isAndroidBrowser());
 
-		assert.equal(utils.isAndroidBrowser(), true); // Ensure it detects Android correctly
+		assert.equal(utils.isAndroidBrowser(), true);
 
 		// Restore the original navigator
 		Object.defineProperty(global, 'navigator', {
@@ -490,4 +490,5 @@ describe('Utility Methods', () => {
 		assert.strictEqual(result.user1.uid, uid1);
 		assert.strictEqual(result.user2.uid, uid2);
 	});
+	// CHATGPT WAS USED
 });

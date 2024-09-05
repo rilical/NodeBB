@@ -83,5 +83,5 @@ utils.generateUUID = function () {
 	URL.revokeObjectURL(temp_url);
 	return uuid.split(/[:/]/g).pop().toLowerCase();
 };
-
+// CHATGPT WAS USED
 module.exports = utils;

@@ -149,4 +149,5 @@ module.exports = function (alerts, bootstrap, api, utils, app, $, ajaxify) {
 	}
 	console.log('OMAR_GHABAYEN - categorySearch.js - END');
 	return categorySearch;
+	// CHATGPT WAS USED
 };

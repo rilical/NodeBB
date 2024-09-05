@@ -74,4 +74,5 @@ describe('Category Search', () => {
 			done();
 		}, 500);
 	});
+	// CHATGPT WAS USED
 });

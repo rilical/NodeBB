@@ -1,149 +1,153 @@
-'use strict';
+const categorySearch = {};
 
-define('categorySearch', ['alerts', 'bootstrap', 'api'], function (alerts, bootstrap, api) {
-	const categorySearch = {};
 
-	categorySearch.init = function (el, options) {
-		initializeOptions(options);
-		const searchEl = initializeSearchElement(el);
-		if (!searchEl) return;
+console.log('OMAR_GHABAYEN: categorySearch called in Module');
+categorySearch.init = function (el, options = {}) {
+	options.privilege = options.privilege || 'topics:read';
+	options.states = options.states || ['watching', 'tracking', 'notwatching', 'ignoring'];
+	options.cacheList = options.hasOwnProperty('cacheList') ? options.cacheList : true;
+	options.selectedCids = options.selectedCids || ajaxify.data.selectedCids || [];
 
-		const toggleVisibility = shouldToggleVisibility(searchEl);
-		setupEventHandlers(el, searchEl, toggleVisibility, options);
-	};
+	const localCategories = categorySearch.initializeLocalCategories(options);
+	const searchEl = categorySearch.initializeSearchElement(el);
 
-	function initializeOptions(options) {
-		options = options || {};
-		options.privilege = options.privilege || 'topics:read';
-		options.states = options.states || ['watching', 'tracking', 'notwatching', 'ignoring'];
-		options.cacheList = options.hasOwnProperty('cacheList') ? options.cacheList : true;
-		options.selectedCids = options.selectedCids || ajaxify.data.selectedCids || [];
+	if (!searchEl) {
+		return;
 	}
 
-	function initializeSearchElement(el) {
-		const searchEl = el.find('[component="category-selector-search"]');
-		return searchEl.length ? searchEl : null;
-	}
+	const toggleVisibility = categorySearch.shouldToggleVisibility(searchEl);
+	categorySearch.setupEventHandlers(el, searchEl, toggleVisibility, options, localCategories, null);
+};
 
-	function shouldToggleVisibility(searchEl) {
-		return searchEl.parent('[component="category/dropdown"]').length > 0 ||
-			searchEl.parent('[component="category-selector"]').length > 0;
-	}
+categorySearch.initializeLocalCategories = function (options) {
+	return Array.isArray(options.localCategories) ?
+		options.localCategories.map(c => ({ ...c })) :
+		[];
+};
 
-	function setupEventHandlers(el, searchEl, toggleVisibility, options) {
-		const categoriesList = null;
-		const localCategories = initializeLocalCategories(options);
+categorySearch.initializeSearchElement = function (el) {
+	const searchEl = el.find('[component="category-selector-search"]');
+	return searchEl.length ? searchEl : null;
+};
 
-		el.on('show.bs.dropdown', () => onShowDropdown(el, searchEl, toggleVisibility, options, localCategories, categoriesList));
-		el.on('shown.bs.dropdown', () => onShownDropdown(searchEl));
-		el.on('hide.bs.dropdown', () => onHideDropdown(el, searchEl, toggleVisibility));
-	}
+categorySearch.shouldToggleVisibility = function (searchEl) {
+	return searchEl.parent('[component="category/dropdown"]').length > 0 ||
+           searchEl.parent('[component="category-selector"]').length > 0;
+};
 
-	function initializeLocalCategories(options) {
-		return Array.isArray(options.localCategories) ?
-			options.localCategories.map(c => ({ ...c })) :
-			[];
-	}
+categorySearch.setupEventHandlers = function (el, searchEl,
+	toggleVisibility, options, localCategories, categoriesList) {
+	el.on('show.bs.dropdown', () => {
+		categorySearch.handleDropdownShow(el, searchEl, toggleVisibility);
+		categorySearch.setupSearchHandlers(searchEl, options, localCategories, categoriesList);
+	});
 
-	function onShowDropdown(el, searchEl, toggleVisibility, options, localCategories, categoriesList) {
-		if (toggleVisibility) {
-			toggleSearchVisibility(el, searchEl);
-		}
-		setupSearch(searchEl, options, localCategories, categoriesList);
-	}
+	el.on('shown.bs.dropdown', () => {
+		categorySearch.handleDropdownShown(searchEl);
+	});
 
-	function toggleSearchVisibility(el, searchEl) {
+	el.on('hide.bs.dropdown', () => {
+		categorySearch.handleDropdownHide(el, searchEl, toggleVisibility);
+	});
+};
+
+categorySearch.handleDropdownShow = function (el, searchEl, toggleVisibility) {
+	if (toggleVisibility) {
 		el.find('.dropdown-toggle').css({ visibility: 'hidden' });
 		searchEl.removeClass('hidden').css({
 			'z-index': el.find('.dropdown-toggle').css('z-index') + 1,
 		});
 	}
+};
 
-	function setupSearch(searchEl, options, localCategories, categoriesList) {
-		const doSearch = createSearchFunction(searchEl, options, localCategories, categoriesList);
-		searchEl.on('click', (ev) => {
-			ev.preventDefault();
-			ev.stopPropagation();
-		});
-		searchEl.find('input').val('').on('keyup', utils.debounce(doSearch, 300));
-		doSearch();
+categorySearch.handleDropdownShown = function (searchEl) {
+	if (!['xs', 'sm'].includes(utils.findBootstrapEnvironment())) {
+		searchEl.find('input').focus();
 	}
+};
 
-	function createSearchFunction(searchEl, options, localCategories, categoriesList) {
-		return function () {
-			const val = searchEl.find('input').val();
-			if (val.length > 1 || (!val && !categoriesList)) {
-				loadList(val, options, localCategories, (categories) => {
-					categoriesList = options.cacheList ? (categoriesList || categories) : categories;
-					renderList(categories, options);
-				});
-			} else if (!val && categoriesList) {
-				renderList(categoriesList, options);
-			}
-		};
-	}
-
-	function onShownDropdown(searchEl) {
-		if (!['xs', 'sm'].includes(utils.findBootstrapEnvironment())) {
-			searchEl.find('input').focus();
-		}
-	}
-
-	function onHideDropdown(el, searchEl, toggleVisibility) {
-		if (toggleVisibility) {
-			resetVisibility(el, searchEl);
-		}
-		searchEl.off('click');
-		searchEl.find('input').off('keyup');
-	}
-
-	function resetVisibility(el, searchEl) {
+categorySearch.handleDropdownHide = function (el, searchEl, toggleVisibility) {
+	if (toggleVisibility) {
 		el.find('.dropdown-toggle').css({ visibility: 'inherit' });
 		searchEl.addClass('hidden');
 	}
 
-	function loadList(search, options, localCategories, callback) {
-		api.get('/search/categories', {
-			search: search,
-			query: utils.params(),
-			parentCid: options.parentCid || 0,
-			selectedCids: options.selectedCids,
-			privilege: options.privilege,
-			states: options.states,
-			showLinks: options.showLinks,
-		}, function (err, { categories }) {
-			if (err) {
-				return alerts.error(err);
-			}
-			callback(localCategories.concat(categories));
-		});
-	}
+	searchEl.off('click');
+	searchEl.find('input').off('keyup');
+};
 
-	function renderList(categories, options) {
-		const selectedCids = options.selectedCids.map(String);
-		categories.forEach(function (c) {
-			c.selected = selectedCids.includes(String(c.cid));
-		});
+categorySearch.setupSearchHandlers = function (searchEl, options, localCategories, categoriesList) {
+	const doSearch = categorySearch.createSearchFunction(searchEl, options, localCategories, categoriesList);
 
-		app.parseAndTranslate(options.template, {
-			categoryItems: categories.slice(0, 200),
-			selectedCategory: ajaxify.data.selectedCategory,
-			allCategoriesUrl: ajaxify.data.allCategoriesUrl,
-		}, function (html) {
-			updateDOM(html, categories);
-		});
-	}
+	searchEl.on('click', (ev) => {
+		ev.preventDefault();
+		ev.stopPropagation();
+	});
 
-	function updateDOM(html, categories) {
-		const el = $('[component="category/list"]');
-		el.html(html.find('[component="category/list"]').html());
-		el.find('[component="category/no-matches"]').toggleClass('hidden', !!categories.length);
-		const dropdownToggle = $('.dropdown-toggle').get(0);
-		const bsDropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
+	searchEl.find('input').val('').on('keyup', utils.debounce(doSearch, 300));
+	doSearch();
+};
+
+categorySearch.createSearchFunction = function (searchEl, options, localCategories, categoriesList) {
+	return function () {
+		const val = searchEl.find('input').val();
+
+		if (val.length > 1 || (!val && !categoriesList)) {
+			categorySearch.loadList(val, options, localCategories, function (categories) {
+				categoriesList = options.cacheList && (categoriesList || categories);
+				categorySearch.renderList(categories, options);
+			});
+		} else if (!val && categoriesList) {
+			categorySearch.renderList(categoriesList, options);
+		}
+	};
+};
+
+categorySearch.loadList = function (search, options, localCategories, callback) {
+	api.get('/search/categories', {
+		search: search,
+		query: utils.params(),
+		parentCid: options.parentCid || 0,
+		selectedCids: options.selectedCids,
+		privilege: options.privilege,
+		states: options.states,
+		showLinks: options.showLinks,
+	}, function (err, { categories }) {
+		if (err) {
+			return alerts.error(err);
+		}
+		callback(localCategories.concat(categories));
+	});
+};
+
+categorySearch.renderList = function (categories, options) {
+	const selectedCids = options.selectedCids.map(String);
+	categories.forEach((c) => {
+		c.selected = selectedCids.includes(String(c.cid));
+	});
+
+	app.parseAndTranslate(options.template, {
+		categoryItems: categories.slice(0, 200),
+		selectedCategory: ajaxify.data.selectedCategory,
+		allCategoriesUrl: ajaxify.data.allCategoriesUrl,
+	}, function (html) {
+		categorySearch.updateDOM(html, categories);
+	});
+};
+
+categorySearch.updateDOM = function (html, categories) {
+	console.log('OMAR_GHABAYEN: updateDOM called', { categories });
+	$('[component="category/list"]').html(html.find('[component="category/list"]').html());
+	$('[component="category/list"] [component="category/no-matches"]')
+		.toggleClass('hidden', !!categories.length);
+
+	if (bootstrap && bootstrap.Dropdown) {
+		const bsDropdown = bootstrap.Dropdown.getInstance($('[component="category/dropdown"]').get(0));
 		if (bsDropdown) {
 			bsDropdown.update();
 		}
 	}
+//USED GPT-3
+};
 
-	return categorySearch;
-});
+module.exports = categorySearch;

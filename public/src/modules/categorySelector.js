@@ -107,4 +107,5 @@ define('categorySelector', [
 	};
 
 	return categorySelector;
+// USED GPT-3
 });
